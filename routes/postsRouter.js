@@ -3,7 +3,15 @@ const db = require('../data/db');
 
 module.exports = router;
 
-const { find, findById, insert, update, remove } = db;
+const {
+  find,
+  findById,
+  insert,
+  update,
+  remove,
+  insertComment,
+  findPostComments
+} = db;
 
 // POST - /api/posts - Creates a post using the information sent inside the request body.
 router.post('/', (req, res) => {
@@ -147,3 +155,80 @@ router.put('/:id', (req, res) => {
         errorMessage: `Please provide title and contents for the post.`
       });
 });
+router.get('/:id/comments', async (req, res) => {
+  // const postId = await findById(req.params.id)
+
+  try {
+    const postId = req.params.id;
+    const comments = await findPostComments(postId);
+    comments
+      ? res.status(200).json(comments)
+      : res.status(404).json({
+          errorMessage: 'The post with the specified ID does not exist'
+        });
+    //- If the _post_ with the specified `id` is not found:
+    //  - return HTTP status code `404` (Not Found).
+    //  - return the following JSON object: `{ message: "The post with the specified ID does not exist." }`.
+  } catch (err) {
+    res.status(500).json({
+      errorMessage: 'The comments information could not be retrieved.',
+      serverError: `${err}`
+    });
+  }
+});
+
+// POST - /api/posts/:id/comments - Creates a comment for the post with the specified id using information sent inside of the `request body`.
+router.post('/:id/comments', (req, res) => {
+  const { id } = req.params;
+  const { text } = req.body;
+  const newComment = { post_Id: id, text: text };
+  !text
+    ? // - If the request body is missing the `text` property:
+      //   - cancel the request.
+      //   - respond with HTTP status code `400` (Bad Request).
+      //   - return the following JSON response: `{ errorMessage: "Please provide text for the comment." }`.
+      res.status(404).json({
+        errorMessage: 'Please provide text for the comment'
+      })
+    : db
+        .findById(newComment.post_Id)
+        .then(post => {
+          // - If the _post_ with the specified `id` is not found:
+          //   - return HTTP status code `404` (Not Found).
+          //   - return the following JSON object: `{ message: "The post with the specified ID does not exist." }`.
+          if (!post) {
+            res.status(404).json({
+              errorMessage: 'The post with the specified ID does not exist.'
+            });
+          } else {
+            // - If the information about the _comment_ is valid:
+            //   - save the new _comment_ the the database.
+            //   - return HTTP status code `201` (Created).
+            //   - return the newly created _comment_.
+            console.log(text);
+            db.insertComment(newComment)
+              .then(comment => {
+                res.status(201).json(comment);
+              })
+              .catch(err => {
+                res.status(500).json({
+                  errorMessage:
+                    'There was an error while saving the comment to the database',
+                  serverError: `${err}`
+                });
+              });
+          }
+        })
+        .catch(err => {
+          res.status(500).json({
+            errorMessage:
+              'There was an error gettiong the post from the database',
+            serverError: `${err}`
+          });
+        });
+});
+
+// - If there's an error while saving the _comment_:
+//   - cancel the request.
+//   - respond with HTTP status code `500` (Server Error).
+//   - return the following JSON object: `{ error: "There was an error while saving the comment to the database" }`.

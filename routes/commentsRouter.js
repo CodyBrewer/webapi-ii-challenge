@@ -3,13 +3,14 @@ const db = require('../data/db');
 
 module.exports = router;
 
-const { insertComment, findPostComments } = db;
+const {} = db;
 
 // GET - /api/posts/:id/comments - Returns an array of all the comment objects associated with the post with the specified id.
 router.get('/', async (req, res) => {
   // const postId = await findById(req.params.id)
-  console.log(req);
+
   try {
+    res.status(200).json(req);
     // const comments = await findPostComments(postId);
     // res.status(200).json(comments);
     //- If the _post_ with the specified `id` is not found:
